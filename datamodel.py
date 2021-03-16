@@ -103,25 +103,35 @@ def process_whole_tables(whole_tables):
     for table in whole_tables:
         whole_tables[table][0].sort()
         whole_tables[table][1].sort()
-        dict = {'table':table,'fields':whole_tables[table][0],'files':whole_tables[table][1]}
+        dict = {'table':table,'fields':whole_tables[table][0],
+                'files':whole_tables[table][1],'relations':whole_tables[table][2]}
         dict_to_json.append(dict)
-    with open(config.sql_model, "w") as outfile:
+    with open(config.json_sql_model, "w") as outfile:
         json.dump(dict_to_json, outfile,indent=4)
-        dbg.msg('write','file','json',2,'Printint Datamodel to {}'.format(config.sql_model))
+        dbg.msg('write','file','json',2,'Printint Datamodel to {}'.format(config.json_sql_model))
 
+def extract_relations(whole_tables):
+    new_whole_tables=whole_tables
+    for table in whole_tables.keys():
+        new_whole_tables[table].append([])
+        for field in whole_tables[table][0]:
+            for tablesearch in whole_tables.keys():
+                if field in whole_tables[tablesearch][0] and table != tablesearch:
+                    new_whole_tables[table][2].append(field +" -> "+ tablesearch)
 
+    return new_whole_tables
 def main():
     # We first extract all files in the path that have an extension in config.sql_extensions
     list_of_files = all_sql_files(config.sql_path)
     # Now we process all files
     whole_tables=process_all_files(list_of_files)
+    #whole_tables
+    #{'table1': [['field1', 'field2', 'field3'],['C:\\path1\\','C:\\path2\\']], 'table2':[['field4', 'field1'...
+    whole_tables=extract_relations(whole_tables)
     process_whole_tables(whole_tables)
-    
 
-    # TODO Luego es necesario procesar whole_tables, y crear, tablespace,table, listacampos
-    # TODO Sacarlo tdo a un fichero de configuracion
-    # TODO A partir de ahi es pintar las entidades sueltas
-    # TODO pintar las relaciones entre tablas
+    # TODO Incluir un fichero de entrada con Descripciones
+    # TODO Detectar tablas temporales o no reales
 
 
 

@@ -2,7 +2,10 @@
 sql_extensions=['sql']
 
 # Path to review
-sql_path=r'C:\Python\sql'
+sql_path=r'C:\Python\work\queries'
 
 # JSON (data model) to create
-sql_model=r'C:\Python\datamodel\datamodel.json'
+json_sql_model=r'C:\Python\work\datamodelklarna.json'
+plant_uml=r'C:\Python\work\datamodelklarna.plantuml'
+
+
