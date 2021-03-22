@@ -2,12 +2,11 @@ import config
 from debug import Debug
 import sqlparser
 
-
-
 import os
 import sys
 import re
 import json
+from datetime import datetime
 
 def all_sql_files(path):
     ### This returns the list of files in a specific folder
@@ -78,10 +77,8 @@ def process_all_files(list_of_files):
             dbg.msg('process', 'query', 'query', 1, query[:50])
             # query = "Select a.col1, b.col2 from tb1 as a inner join tb2 as b on tb1.col7 = tb2.col8;"
             # info=sqlparser.mylex(query.lower())
-            tables = sqlparser.find_all_tables(query)
-            dbg.msg('process', 'query', 'tables', 1, str(tables).replace("[", "/").replace("]", "/"))
-            fields = sqlparser.find_all_fields(query)
-            dbg.msg('process', 'query', 'fields', 1, str(fields).replace("[", "/").replace("]", "/"))
+            tables,fields = sqlparser.find_all_tables_and_fields(query)
+            dbg.msg('process', 'query', 'tables and fields', 1, str(tables).replace("[", "/").replace("]", "/"))
             last_tables = analyze(tables, fields)
             for table, fields in last_tables.items():
                 if table not in whole_tables.keys():
@@ -106,9 +103,18 @@ def process_whole_tables(whole_tables):
         dict = {'table':table,'fields':whole_tables[table][0],
                 'files':whole_tables[table][1],'relations':whole_tables[table][2]}
         dict_to_json.append(dict)
-    with open(config.json_sql_model, "w") as outfile:
+    pattern=r".+\[(.+)\].+"
+    datefileformat = re.search(pattern,config.json_sql_model)[1]
+    now = datetime.now()
+    try:
+        dt_string = now.strftime(datefileformat)
+    except IOError as e:
+        raise ValueError("Bad date format in name: {} ".format(datefileformat))
+    pattern = r"\[.+\]"
+    json_file_name =re.sub(pattern,dt_string,config.json_sql_model)
+    with open(json_file_name, "w") as outfile:
         json.dump(dict_to_json, outfile,indent=4)
-        dbg.msg('write','file','json',2,'Printint Datamodel to {}'.format(config.json_sql_model))
+        dbg.msg('write','file','json',2,'Printint Datamodel to {}'.format(json_file_name))
 
 def extract_relations(whole_tables):
     new_whole_tables=whole_tables
@@ -123,13 +129,15 @@ def extract_relations(whole_tables):
 def main():
     # We first extract all files in the path that have an extension in config.sql_extensions
     list_of_files = all_sql_files(config.sql_path)
-    # Now we process all files
+    # Now we process all files and create a dictionary with the tables and fields
     whole_tables=process_all_files(list_of_files)
     #whole_tables
     #{'table1': [['field1', 'field2', 'field3'],['C:\\path1\\','C:\\path2\\']], 'table2':[['field4', 'field1'...
+    # Now we extract the relationships
     whole_tables=extract_relations(whole_tables)
     process_whole_tables(whole_tables)
 
+    # TODO abrir branch nuevo
     # TODO Incluir un fichero de entrada con Descripciones
     # TODO Detectar tablas temporales o no reales
 

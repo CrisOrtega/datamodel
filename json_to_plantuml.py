@@ -4,7 +4,8 @@ from debug import Debug
 import json
 import os
 import sys
-
+import re
+from datetime import datetime
 
 def readjson(jsonfile):
     with open(jsonfile) as json_file:
@@ -37,7 +38,14 @@ hide stereotypes
 def writemodel(datamodel):
     model=[]
     for table_row in datamodel:
-        model.append("Table({},\"{}\"){{".format(table_row['table'],table_row['table']))
+        if "." in table_row['table']:
+            type="Table"
+            model.append("{}({},\"{}\"){{".format(type, table_row['table'], table_row['table']))
+        else:
+            type='Object'
+            model.append("{} {} {{".format(type, table_row['table']))
+
+
         for field in table_row['fields']:
             model.append("{}".format(field))
         model.append('}\n\n')
@@ -65,7 +73,16 @@ def closefile(datamodel):
     return close
 
 def writeplantuml(file):
-    with open(config.plant_uml, 'w') as f:
+    pattern = r".+\[(.+)\].+"
+    datefileformat = re.search(pattern, config.plant_uml)[1]
+    now = datetime.now()
+    try:
+        dt_string = now.strftime(datefileformat)
+    except IOError as e:
+        raise ValueError("Bad date format in name: {} ".format(datefileformat))
+    pattern = r"\[.+\]"
+    plantuml_file_name = re.sub(pattern, dt_string, config.plant_uml)
+    with open(plantuml_file_name, 'w') as f:
         for item in file:
             f.write("%s\n" % item)
 
@@ -95,7 +112,7 @@ def process_relations(datamodel):
 
 def main():
     # We read the json
-    datamodel = readjson(config.json_sql_model)
+    datamodel = readjson(config.json_sql_model_fixed)
     dbg.msg('read','file','json',1,str(datamodel)[:100])
 
     # we create the file variable
@@ -121,10 +138,10 @@ if __name__ == "__main__":
     # Initialize debuger
     dbg = Debug(os.path.basename(__file__), level=1)
     dbg.msg('Version', 'sys.version', 'sys.version', 1, sys.version)
-    dbg.msg('config', 'path', 'sql path', 1, config.sql_path)
     main()
     # Use
     # https://plantuml-editor.kkeisuke.com/
     # to visualize
+    # TODO abrir branch nuevo
     # TODO make two outputs with and without relations
     # TODO black list for relationships

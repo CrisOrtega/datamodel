@@ -1,7 +1,10 @@
 import re
+from datetime import datetime
 
-def find_all_tables(string):
+def find_all_tables_and_fields(string):
     tables={}
+    fields = find_all_fields(string)
+
     # results with alias
     alias=[]
     alias.append(r"from\s+(\w+\.\w+)\s+as\s+(\w+)")
@@ -22,6 +25,7 @@ def find_all_tables(string):
 
     # results without alias
     noalias=[]
+    noalias.append(r"from\s+(\w+\.\w+)\s?$")
     noalias.append(r"from\s+(\w+\.\w+)\s+")
     noalias.append(r"from\s+(\w+)\s+where")
     noalias.append(r"from\s+(\w+)\s+group")
@@ -29,6 +33,10 @@ def find_all_tables(string):
     noalias.append(r"\s+join\s+(\w+\.\w+)\s+on\s+")
     noalias.append(r"\s+join\s+(\w+)\s+on\s+")
 
+    # This is in case that there is a subquery and this subquery does not have any "(" or ")" inside
+    specialcase=[]
+    specialcase.append(r"from\s+\(([^)]+)\)\s+as\s+\w+")
+    specialcase.append(r"join\s+\(([^)]+)\)\s+as\s+\w+")
 
     for alia in alias:
         result = re.findall(alia, string)
@@ -48,7 +56,26 @@ def find_all_tables(string):
                 if res not in tables.keys():
                     tables[res]=['']
 
-    return tables
+    i=0
+    for special in specialcase:
+        result = re.findall(special, string)
+        if result != None:
+            for res in result:
+                new_tables,new_fields=find_all_tables_and_fields(res)
+                now = datetime.now()
+                variable = now.strftime('%H%M%S')+str(i)
+                i+=1
+                for new_table in new_tables:
+                    if new_table not in tables.keys():
+                        tables[new_table]=[]
+                        tables[new_table].append(variable)
+                for new_field in new_fields:
+                    if new_field[0] == '':
+                        fields.append([variable,new_field[1]])
+                    else:
+                        fields.append(new_field)
+
+    return tables,fields
 
 def find_all_fields(string):
     fields=[]
@@ -70,6 +97,8 @@ def find_all_fields(string):
     lpattern_select_fields=[]
     # de select a from entre comas
     lpattern_select_fields.append(r"select\s+.+,\s?(\w+)\s?,.+\s+from")
+    # de select a from un campo
+    lpattern_select_fields.append(r"select\s+\s?(\w+)\s?\s+from")
     # despues de select
     lpattern_select_fields.append(r"select\s+(\w+)\s?,.+\s+from")
     # antes de from
@@ -80,6 +109,21 @@ def find_all_fields(string):
     lpattern_select_fields.append(r"select\s+.+\(\s?distinct\s+(\w+)\s?\).+\s+from")
     # substring y similares
     lpattern_select_fields.append(r"select\s+.+\(\s?(\w+)\s?,.+\).+\s+from")
+    # All select fields, without ., functions broke it
+    #lpattern_select_fields.append(r"(?:SELECT\s++(?=(?:[#\w,`.]++\s++)+)|(?!^)\G\s*+,\s*+(?:`?+\s*+[#\w]++\s*+`?+\s*+\.\s*+)?+`?+\s*+)(\w++)`?+(?:\s++as\s++[^,\s]++)?+")
+    #preg_match_all('/(?:SELECT\s++(?=(?:[\#\w,`.]++\s++)+) # start matching on SELECT
+    #               |  # or
+    #               (?! ^)\G  # resume from last match position
+    #\s * +,\s * +  # delimited by a comma
+    #(?:`?+\s * +  # optional prefix table with optional backtick
+    #[\  # \w]++   # table name
+    #\s * +`?+  # optional backtick
+    #\s * +\.\s * +  # dot separator
+    #)?+  # optional prefix table end group
+    #`?+\s * +  # optional backtick
+    #)  # initial match or subsequent match
+    #(\w++)  # capturing group
+    #`?+  # optional backtick
 
     for pattern in lpattern_select_fields:
         result = re.findall(pattern, string)
