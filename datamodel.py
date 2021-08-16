@@ -18,7 +18,15 @@ def all_sql_files(path):
         for f in files:
             filename=r'^(.+)\.(\w+)$'
             result=re.search(filename,f)
-            if result != None and result[2] in config.sql_extensions:
+            # result contains the result of the search
+            # this changed after python 3.6 and now it is not possible to reference result like result[2]
+            # now I need to use the method group
+            # result will be a _sre.SRE_Match object
+            # result.group(0) will be the full name of the file
+            # result.group(1) will be the name of the file
+            # result.group(2) will be the extension of the file
+            # What I'm checking here is that the extension is one of the considered extensions
+            if result != None and result.group(2) in config.sql_extensions:
                 list_of_files.append(os.path.join(root,f))
     return list_of_files
 
