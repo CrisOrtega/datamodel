@@ -74,14 +74,18 @@ def closefile(datamodel):
 
 def writeplantuml(file):
     pattern = r".+\[(.+)\].+"
-    datefileformat = re.search(pattern, config.plant_uml)[1]
-    now = datetime.now()
-    try:
-        dt_string = now.strftime(datefileformat)
-    except IOError as e:
-        raise ValueError("Bad date format in name: {} ".format(datefileformat))
-    pattern = r"\[.+\]"
-    plantuml_file_name = re.sub(pattern, dt_string, config.plant_uml)
+    datefileformat_s = re.search(pattern, config.plant_uml)
+    if datefileformat_s is not None:
+        datefileformat=datefileformat_s.group(1)
+        now = datetime.now()
+        try:
+            dt_string = now.strftime(datefileformat)
+        except IOError as e:
+            raise ValueError("Bad date format in name: {} ".format(datefileformat))
+        pattern = r"\[.+\]"
+        plantuml_file_name = re.sub(pattern, dt_string, config.plant_uml)
+    else:
+        plantuml_file_name = config.plant_uml
     with open(plantuml_file_name, 'w') as f:
         for item in file:
             f.write("%s\n" % item)

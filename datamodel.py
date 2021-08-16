@@ -112,14 +112,19 @@ def process_whole_tables(whole_tables):
                 'files':whole_tables[table][1],'relations':whole_tables[table][2]}
         dict_to_json.append(dict)
     pattern=r".+\[(.+)\].+"
-    datefileformat = re.search(pattern,config.json_sql_model)[1]
-    now = datetime.now()
-    try:
-        dt_string = now.strftime(datefileformat)
-    except IOError as e:
-        raise ValueError("Bad date format in name: {} ".format(datefileformat))
-    pattern = r"\[.+\]"
-    json_file_name =re.sub(pattern,dt_string,config.json_sql_model)
+    datefileformat_s = re.search(pattern,config.json_sql_model)
+    if datefileformat_s is not None:
+        datefileformat=datefileformat_s.group(1)
+        now = datetime.now()
+        try:
+            dt_string = now.strftime(datefileformat)
+        except IOError as e:
+            raise ValueError("Bad date format in name: {} ".format(datefileformat))
+        pattern = r"\[.+\]"
+        json_file_name =re.sub(pattern,dt_string,config.json_sql_model)
+    else:
+        json_file_name=config.json_sql_model
+
     with open(json_file_name, "w") as outfile:
         json.dump(dict_to_json, outfile,indent=4)
         dbg.msg('write','file','json',2,'Printint Datamodel to {}'.format(json_file_name))
